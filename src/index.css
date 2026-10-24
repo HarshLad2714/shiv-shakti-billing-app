@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+    background-image: radial-gradient(circle at 1px 1px, rgba(20, 17, 15, 0.045) 1px, transparent 0);
+    background-size: 18px 18px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible {
+    @apply outline-none ring-2 ring-saffron ring-offset-2 ring-offset-paper;
+  }
+
+  ::selection {
+    background: #ff6a00;
+    color: #14110f;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 touch-manipulation;
+  }
+
+  .btn-primary {
+    @apply btn bg-saffron text-ink hover:bg-gold;
+  }
+
+  .btn-dark {
+    @apply btn bg-ink text-white hover:bg-black;
+  }
+
+  .btn-ghost {
+    @apply btn bg-white text-ink ring-1 ring-black/10 hover:bg-cream;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+  }
+
+  .field {
+    @apply min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-base text-ink shadow-sm;
+  }
+
+  .field:focus {
+    @apply border-saffron ring-2 ring-saffron/30;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.96);
+  }
+  45% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pop {
+  animation: pop 180ms ease-out;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-7px);
+  }
+  75% {
+    transform: translateX(7px);
+  }
+}
+
+.animate-shake {
+  animation: shake 280ms ease-in-out;
+}
+
+.receipt-top {
+  background:
+    radial-gradient(circle at 12px 0, transparent 10px, #fffdf8 10.5px) left top / 24px 14px repeat-x,
+    #fffdf8;
+}
+
+#print-root {
+  position: fixed;
+  left: -12000px;
+  top: 0;
+  width: 80mm;
+  background: white;
+  color: black;
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  #print-root {
+    display: block !important;
+    position: static !important;
+    left: auto !important;
+    width: 80mm;
+  }
+
+  @page {
+    margin: 4mm;
+    size: 80mm auto;
+  }
+}
