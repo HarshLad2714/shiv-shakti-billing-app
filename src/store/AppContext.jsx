@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { ITEM_RENAMES, RETIRED_IDS, mergeCatalog, normalizeItem, uniqueId } from "../data/menu";
 import { STRINGS } from "../i18n";
 import { computeTotals, lineAmount, roundQty } from "../utils/calc";
+import { billsNeedPush, fetchLiveBills, mergeBills, saveLiveBills } from "../utils/billSync";
 import { chooseSync, fetchLiveMenu, saveLiveMenu } from "../utils/menuSync";
 import { KEYS, load, save } from "../utils/storage";
 
@@ -107,10 +108,14 @@ export function AppProvider({ children }) {
   const [printNonce, setPrintNonce] = useState(0);
   const [lastAddedId, setLastAddedId] = useState("");
   const menuUpdatedAtRef = useRef(Number(load(KEYS.menuUpdatedAt, 0)) || 0);
+  const billsUpdatedAtRef = useRef(Number(load(KEYS.billsUpdatedAt, 0)) || 0);
   const itemsRef = useRef(items);
   const removedRef = useRef(removedIds);
+  const billsRef = useRef(bills);
   const settingsRef = useRef(settings);
   const publishingRef = useRef(false);
+  const billPublishingRef = useRef(false);
+  const billPendingRef = useRef(false);
 
   useEffect(() => {
     itemsRef.current = items;
@@ -121,6 +126,9 @@ export function AppProvider({ children }) {
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+  useEffect(() => {
+    billsRef.current = bills;
+  }, [bills]);
 
   useEffect(() => {
     save(KEYS.items, items);
@@ -245,6 +253,102 @@ export function AppProvider({ children }) {
     };
   }, [applyRemoteMenu, publishMenu]);
 
+  const rememberBillsUpdatedAt = useCallback((value) => {
+    const next = Number(value) || 0;
+    billsUpdatedAtRef.current = next;
+    save(KEYS.billsUpdatedAt, next);
+  }, []);
+
+  const applyBills = useCallback(
+    (nextBills, updatedAt) => {
+      const merged = mergeBills(billsRef.current, nextBills);
+      billsRef.current = merged;
+      setBills(merged);
+      const maxNo = merged.reduce((max, bill) => Math.max(max, Number(bill.billNo) || 0), 0);
+      setNextBillNo((current) => Math.max(current, maxNo + 1));
+      if (updatedAt != null) rememberBillsUpdatedAt(updatedAt);
+    },
+    [rememberBillsUpdatedAt],
+  );
+
+  const publishBills = useCallback(
+    async (list, { quiet } = {}) => {
+      if (billPublishingRef.current) {
+        billPendingRef.current = true;
+        return false;
+      }
+      const payload = mergeBills(list, []);
+      if (!payload.length) return false;
+      billPublishingRef.current = true;
+      try {
+        let pending = payload;
+        let base = billsUpdatedAtRef.current;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const result = await saveLiveBills({
+            bills: pending,
+            pin: settingsRef.current.pin,
+            baseUpdatedAt: base,
+          });
+          if (result.denied) {
+            if (!quiet) toast(t("livePin"), "err");
+            return false;
+          }
+          if (result.conflict) {
+            pending = mergeBills(billsRef.current, result.bills);
+            base = Number(result.updatedAt) || 0;
+            applyBills(pending, base);
+            continue;
+          }
+          applyBills(mergeBills(billsRef.current, result.bills || pending), result.updatedAt);
+          return true;
+        }
+        throw new Error("bills");
+      } catch {
+        if (!quiet) toast(t("liveOffline"), "err");
+        return false;
+      } finally {
+        billPublishingRef.current = false;
+        if (billPendingRef.current) {
+          billPendingRef.current = false;
+          publishBills(billsRef.current, { quiet: true });
+        }
+      }
+    },
+    [applyBills, t, toast],
+  );
+
+  useEffect(() => {
+    let stop = false;
+    const tick = async () => {
+      if (billPublishingRef.current) return;
+      try {
+        const server = await fetchLiveBills();
+        if (stop || billPublishingRef.current || !Array.isArray(server.bills)) return;
+        const merged = mergeBills(billsRef.current, server.bills);
+        const serverAt = Number(server.updatedAt) || 0;
+        if (merged.length !== billsRef.current.length) applyBills(merged, serverAt);
+        else rememberBillsUpdatedAt(serverAt);
+        if (billsNeedPush(merged, server.bills)) await publishBills(merged, { quiet: true });
+      } catch {
+        // Bills stay on this device until the live site can be reached.
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 15000);
+    const onFocus = () => tick();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [applyBills, publishBills, rememberBillsUpdatedAt]);
+
   const dismissToast = useCallback((id) => {
     setToasts((list) => list.filter((item) => item.id !== id));
   }, []);
@@ -348,6 +452,7 @@ export function AppProvider({ children }) {
       change = Math.round((received - cart.grandTotal) * 100) / 100;
     }
     const bill = {
+      id: crypto.randomUUID(),
       billNo: nextBillNo,
       dateTime: new Date().toISOString(),
       items: cart.lines.map((line) => ({
@@ -371,13 +476,18 @@ export function AppProvider({ children }) {
       received: draft.paymentMode === "Cash" ? received : cart.grandTotal,
       change: draft.paymentMode === "Cash" ? change : 0,
     };
-    setBills((current) => [bill, ...current]);
+    setBills((current) => {
+      const next = [bill, ...current];
+      billsRef.current = next;
+      queueMicrotask(() => publishBills(next));
+      return next;
+    });
     setNextBillNo((current) => current + 1);
     setDraft(newDraft(settings));
     setLastAddedId("");
     toast(`${t("billSaved")} #${String(bill.billNo).padStart(4, "0")}`);
     return bill;
-  }, [cart, draft, nextBillNo, settings, t, toast]);
+  }, [cart, draft, nextBillNo, publishBills, settings, t, toast]);
 
   const requestPrint = useCallback((bill) => {
     setPrintBill(bill);
@@ -478,14 +588,17 @@ export function AppProvider({ children }) {
       setRemovedIds(keptRemoved);
       setItems(nextItems);
       publishMenu(nextItems, keptRemoved);
-      setBills(data.bills);
+      const nextBills = mergeBills(data.bills, []);
+      billsRef.current = nextBills;
+      setBills(nextBills);
+      queueMicrotask(() => publishBills(nextBills));
       setSettings(nextSettings);
       setDraft(sanitizeDraft(data.draft, nextSettings));
       setNextBillNo(Math.max(Number(data.nextBillNo) || 1, maxBill + 1));
       toast(t("restored"));
       return true;
     },
-    [publishMenu, removedIds, t, toast],
+    [publishBills, publishMenu, removedIds, t, toast],
   );
 
   const unlockAdmin = useCallback((pin) => {

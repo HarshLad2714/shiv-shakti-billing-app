@@ -1,15 +1,24 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../store/AppContext";
-import { formatDate, formatQty, formatTime, inr, istDateKey, padBill, todayKey, toCsv } from "../utils/format";
+import { formatDate, formatQty, formatTime, inr, istDateKey, padBill, toCsv } from "../utils/format";
+import { periodRange } from "../utils/periods";
 import { downloadFile } from "../utils/storage";
 
 const MODES = ["Cash", "UPI", "Card"];
 
 export default function Reports() {
   const { bills, t } = useApp();
-  const today = todayKey();
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+  const initial = periodRange("day");
+  const [period, setPeriod] = useState("day");
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
+
+  const choosePeriod = (next) => {
+    const range = periodRange(next);
+    setPeriod(next);
+    setFrom(range.from);
+    setTo(range.to);
+  };
 
   const filtered = useMemo(() => {
     const start = from <= to ? from : to;
@@ -90,22 +99,40 @@ export default function Reports() {
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <h1 className="font-display text-3xl">{t("reports")}</h1>
         <div className="flex flex-wrap items-end gap-2">
+          {[
+            ["day", "daily"],
+            ["week", "weekly"],
+            ["year", "yearly"],
+          ].map(([value, label]) => (
+            <button key={value} type="button" className={period === value ? "btn-dark" : "btn-ghost"} aria-pressed={period === value} onClick={() => choosePeriod(value)}>
+              {t(label)}
+            </button>
+          ))}
           <label className="text-sm font-semibold">
             {t("from")}
-            <input className="field mt-1" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+            <input
+              className="field mt-1"
+              type="date"
+              value={from}
+              onChange={(event) => {
+                setPeriod("custom");
+                setFrom(event.target.value);
+              }}
+            />
           </label>
           <label className="text-sm font-semibold">
             {t("to")}
-            <input className="field mt-1" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+            <input
+              className="field mt-1"
+              type="date"
+              value={to}
+              onChange={(event) => {
+                setPeriod("custom");
+                setTo(event.target.value);
+              }}
+            />
           </label>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => {
-              setFrom(today);
-              setTo(today);
-            }}
-          >
+          <button type="button" className="btn-ghost" onClick={() => choosePeriod("day")}>
             {t("today")}
           </button>
         </div>

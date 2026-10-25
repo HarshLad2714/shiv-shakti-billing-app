@@ -12,6 +12,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/bills"
+  to = "/.netlify/functions/bills"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
