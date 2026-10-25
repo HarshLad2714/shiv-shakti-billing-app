@@ -4,6 +4,7 @@ export const CATEGORIES = [
   "Snacks",
   "Momos",
   "Maggi",
+  "Pasta",
   "Sandwiches",
   "Franckie",
   "Garlic Bread",
@@ -19,6 +20,7 @@ export const CATEGORY_META = {
   Snacks: { icon: "🍟" },
   Momos: { icon: "🥟" },
   Maggi: { icon: "🍜" },
+  Pasta: { icon: "🍝" },
   Sandwiches: { icon: "🥪" },
   Franckie: { icon: "🌭" },
   "Garlic Bread": { icon: "🍞" },
@@ -35,6 +37,7 @@ export const CATEGORY_LABELS = {
     Snacks: "સ્નેક્સ",
     Momos: "મોમોઝ",
     Maggi: "મેગી",
+    Pasta: "પાસ્તા",
     Sandwiches: "સેન્ડવિચ",
     Franckie: "ફ્રાંકી",
     "Garlic Bread": "ગાર્લિક બ્રેડ",
@@ -96,23 +99,24 @@ const ROWS = [
   ["Maggi", "Veg Maggi", "વેજ મેગી", 300, "kg", { offersCheese: true }],
   ["Maggi", "Cheese Maggi", "ચીઝ મેગી", 350, "kg"],
   ["Maggi", "Tandoori Maggi", "તંદૂરી મેગી", 450, "kg", { offersCheese: true }],
+  ["Pasta", "White Sauce Pasta", "વાઇટ સોસ પાસ્તા", 0, "plate", { platePrice: null, needsReview: true }],
+  ["Pasta", "Pink Sauce Pasta", "પિંક સોસ પાસ્તા", 0, "plate", { platePrice: null, needsReview: true }],
   ["Sandwiches", "Veg Sandwich", "વેજ સેન્ડવિચ", 300, "kg", { needsReview: true }],
   ["Sandwiches", "Cheese Sandwich", "ચીઝ સેન્ડવિચ", 300, "kg", { needsReview: true }],
   ["Sandwiches", "Corn Sandwich", "કોર્ન સેન્ડવિચ", 360, "kg", { needsReview: true }],
   ["Sandwiches", "Paneer Sandwich", "પનીર સેન્ડવિચ", 360, "kg", { needsReview: true }],
-  ["Sandwiches", "Club Sandwich", "ક્લબ સેન્ડવિચ", 300, "kg", { needsReview: true }],
   ["Garlic Bread", "Classic Garlic Bread", "ક્લાસિક ગાર્લિક બ્રેડ", 300, "kg"],
   ["Garlic Bread", "Cheese Garlic Bread", "ચીઝ ગાર્લિક બ્રેડ", 350, "kg"],
   ["Garlic Bread", "Peri Peri Garlic Bread", "પેરી પેરી ગાર્લિક બ્રેડ", 379, "kg", { needsReview: true }],
   ["Dahi Wada", "Dahi Wada", "દહીં વડા", 350, "kg"],
-  ["Dhokla", "Plain Dhokla", "પ્લેન ઢોકળા", 0, "kg", { platePrice: null, kgPrice: null, needsReview: true }],
   ["Dhokla", "Cheese Dhokla", "ચીઝ ઢોકળા", 0, "kg", { platePrice: null, kgPrice: null, needsReview: true }],
   ["Dhokla", "Vegetable Makai Dhokla", "વેજીટેબલ મકાઈ ઢોકળા", 0, "kg", { platePrice: null, kgPrice: null, needsReview: true }],
   ["Uppam", "Vegetable Uppam", "વેજીટેબલ ઉપ્પમ", 0, "kg", { platePrice: null, kgPrice: null, needsReview: true }],
   ["Uppam", "Cheese Uppam", "ચીઝ ઉપ્પમ", 0, "kg", { platePrice: null, kgPrice: null, needsReview: true }],
   ["Beverages", "Cold Coco", "કોલ્ડ કોકો", 180, "litre", { platePrice: 30 }],
-  ["Beverages", "Badam Shake", "બદામ શેક", 200, "litre"],
   ["Beverages", "Cold Coffee", "કોલ્ડ કોફી", 180, "litre"],
+  ["Beverages", "Black Coffee", "બ્લેક કોફી", 0, "litre", { platePrice: null, litrePrice: null, needsReview: true }],
+  ["Beverages", "Iced Tea", "આઇસ્ડ ટી", 0, "litre", { platePrice: null, litrePrice: null, needsReview: true }],
   ["Beverages", "Masala Chaas", "મસાલા છાશ", 80, "litre"],
   ["Beverages", "Hot Chocolate", "હોટ ચોકલેટ", 180, "litre", { platePrice: 30, litrePrice: 180 }],
   ["Snacks", "French Fries Regular", "ફ્રેન્ચ ફ્રાઈઝ રેગ્યુલર", 0, "piece", { hidden: true, needsReview: true }],
@@ -130,7 +134,7 @@ function positiveRate(value) {
 
 export const KG_CATEGORIES = ["Samosa", "Momos", "Dhokla", "Uppam"];
 
-export const RETIRED_IDS = new Set(["paneer-maggi", "fresh-lime-soda"]);
+export const RETIRED_IDS = new Set(["paneer-maggi", "fresh-lime-soda", "club-sandwich", "plain-dhokla", "badam-shake"]);
 
 export function rateMode(category) {
   if (category === "Beverages") return "litre";
@@ -236,8 +240,9 @@ export const ITEM_RENAMES = {
   "mix-franckie": "schezwan-franckie",
 };
 
-export function mergeCatalog(saved) {
-  const catalog = cloneMenu();
+export function mergeCatalog(saved, removedIds = []) {
+  const removed = new Set(Array.isArray(removedIds) ? removedIds : []);
+  const catalog = cloneMenu().filter((item) => !removed.has(item.id));
   if (!Array.isArray(saved) || saved.length === 0) return catalog;
   const byId = new Map(saved.filter((item) => item && item.id).map((item) => [item.id, item]));
   const renamedFrom = new Map(Object.entries(ITEM_RENAMES).map(([from, to]) => [to, from]));
@@ -271,7 +276,9 @@ export function mergeCatalog(saved) {
     });
   });
   const retired = new Set([...Object.keys(ITEM_RENAMES), ...RETIRED_IDS]);
-  const extras = [...byId.values()].filter((item) => !catalogIds.has(item.id) && !retired.has(item.id)).map((item) => normalizeItem(item));
+  const extras = [...byId.values()]
+    .filter((item) => !catalogIds.has(item.id) && !retired.has(item.id) && !removed.has(item.id))
+    .map((item) => normalizeItem(item));
   return [...merged, ...extras];
 }
 

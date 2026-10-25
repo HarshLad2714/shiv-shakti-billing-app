@@ -4,6 +4,8 @@ export const KEYS = {
   settings: "shivshakti.v1.settings",
   draft: "shivshakti.v1.draft",
   seq: "shivshakti.v1.seq",
+  removed: "shivshakti.v1.removed",
+  menuUpdatedAt: "shivshakti.v1.menuUpdatedAt",
 };
 
 export function load(key, fallback) {

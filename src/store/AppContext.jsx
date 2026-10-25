@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ITEM_RENAMES, RETIRED_IDS, mergeCatalog, normalizeItem, uniqueId } from "../data/menu";
 import { STRINGS } from "../i18n";
 import { computeTotals, lineAmount, roundQty } from "../utils/calc";
+import { chooseSync, fetchLiveMenu, saveLiveMenu } from "../utils/menuSync";
 import { KEYS, load, save } from "../utils/storage";
 
 const AppContext = createContext(null);
@@ -85,8 +86,14 @@ function resolveLine(line, items) {
   };
 }
 
+function storedRemovedIds() {
+  const raw = load(KEYS.removed, []);
+  return Array.isArray(raw) ? raw.filter((id) => typeof id === "string" && id) : [];
+}
+
 export function AppProvider({ children }) {
-  const [items, setItems] = useState(() => mergeCatalog(load(KEYS.items, null)));
+  const [removedIds, setRemovedIds] = useState(storedRemovedIds);
+  const [items, setItems] = useState(() => mergeCatalog(load(KEYS.items, null), storedRemovedIds()));
   const [bills, setBills] = useState(() => load(KEYS.bills, []));
   const [settings, setSettings] = useState(() => mergeSettings(load(KEYS.settings, null)));
   const [draft, setDraft] = useState(() => sanitizeDraft(load(KEYS.draft, null), mergeSettings(load(KEYS.settings, null))));
@@ -99,10 +106,28 @@ export function AppProvider({ children }) {
   const [printBill, setPrintBill] = useState(null);
   const [printNonce, setPrintNonce] = useState(0);
   const [lastAddedId, setLastAddedId] = useState("");
+  const menuUpdatedAtRef = useRef(Number(load(KEYS.menuUpdatedAt, 0)) || 0);
+  const itemsRef = useRef(items);
+  const removedRef = useRef(removedIds);
+  const settingsRef = useRef(settings);
+  const publishingRef = useRef(false);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+  useEffect(() => {
+    removedRef.current = removedIds;
+  }, [removedIds]);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   useEffect(() => {
     save(KEYS.items, items);
   }, [items]);
+  useEffect(() => {
+    save(KEYS.removed, removedIds);
+  }, [removedIds]);
   useEffect(() => {
     save(KEYS.bills, bills);
   }, [bills]);
@@ -131,6 +156,94 @@ export function AppProvider({ children }) {
       setToasts((list) => list.filter((item) => item.id !== id));
     }, 2600);
   }, []);
+
+  const rememberUpdatedAt = useCallback((value) => {
+    const next = Number(value) || 0;
+    menuUpdatedAtRef.current = next;
+    save(KEYS.menuUpdatedAt, next);
+  }, []);
+
+  const applyRemoteMenu = useCallback(
+    (menu) => {
+      const removed = Array.isArray(menu.removedIds) ? menu.removedIds : [];
+      removedRef.current = removed;
+      const nextItems = mergeCatalog(menu.items, removed);
+      itemsRef.current = nextItems;
+      setRemovedIds(removed);
+      setItems(nextItems);
+      rememberUpdatedAt(menu.updatedAt);
+    },
+    [rememberUpdatedAt],
+  );
+
+  const publishMenu = useCallback(
+    async (nextItems, nextRemoved, { pin, nextPin, quiet } = {}) => {
+      if (publishingRef.current) return false;
+      publishingRef.current = true;
+      const baseUpdatedAt = menuUpdatedAtRef.current;
+      try {
+        const result = await saveLiveMenu({
+          items: nextItems,
+          removedIds: nextRemoved,
+          pin: pin || settingsRef.current.pin,
+          nextPin,
+          baseUpdatedAt,
+        });
+        if (result.denied) {
+          if (!quiet) toast(t("livePin"), "err");
+          return false;
+        }
+        if (result.conflict && Array.isArray(result.menu?.items)) {
+          applyRemoteMenu(result.menu);
+          if (!quiet) toast(t("liveConflict"), "err");
+          return false;
+        }
+        if (result.menu?.updatedAt) {
+          rememberUpdatedAt(result.menu.updatedAt);
+          if (!quiet) toast(t("liveSaved"));
+          return true;
+        }
+        throw new Error("menu");
+      } catch {
+        rememberUpdatedAt(Date.now());
+        if (!quiet) toast(t("liveOffline"), "err");
+        return false;
+      } finally {
+        publishingRef.current = false;
+      }
+    },
+    [applyRemoteMenu, rememberUpdatedAt, t, toast],
+  );
+
+  useEffect(() => {
+    let stop = false;
+    const tick = async () => {
+      if (publishingRef.current) return;
+      try {
+        const server = await fetchLiveMenu();
+        if (stop || publishingRef.current) return;
+        const choice = chooseSync(menuUpdatedAtRef.current, server);
+        if (choice === "pull") applyRemoteMenu(server);
+        if (choice === "push") await publishMenu(itemsRef.current, removedRef.current, { quiet: true });
+      } catch {
+        // The live menu is unreachable. This device keeps its saved menu.
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 15000);
+    const onFocus = () => tick();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [applyRemoteMenu, publishMenu]);
 
   const dismissToast = useCallback((id) => {
     setToasts((list) => list.filter((item) => item.id !== id));
@@ -297,28 +410,41 @@ export function AppProvider({ children }) {
           cheesePrice: item.cheesePrice === "" ? null : item.cheesePrice,
           offersCheese: Boolean(item.offersCheese),
         });
-        if (!exists) return [...list, { ...next, id: item.id || uniqueId(next.name, list) }];
-        return list.map((entry) => (entry.id === item.id ? next : entry));
+        const nextList = !exists ? [...list, { ...next, id: item.id || uniqueId(next.name, list) }] : list.map((entry) => (entry.id === item.id ? next : entry));
+        itemsRef.current = nextList;
+        queueMicrotask(() => publishMenu(nextList, removedRef.current));
+        return nextList;
       });
       toast(t("itemSaved"));
       return true;
     },
-    [t, toast],
+    [publishMenu, t, toast],
   );
 
   const deleteItem = useCallback(
     (itemId) => {
-      setItems((list) => list.filter((item) => item.id !== itemId));
+      const nextRemoved = removedRef.current.includes(itemId) ? removedRef.current : [...removedRef.current, itemId];
+      const nextItems = itemsRef.current.filter((item) => item.id !== itemId);
+      removedRef.current = nextRemoved;
+      itemsRef.current = nextItems;
+      setRemovedIds(nextRemoved);
+      setItems(nextItems);
       setDraft((current) => ({ ...current, lines: current.lines.filter((line) => line.itemId !== itemId) }));
+      publishMenu(nextItems, nextRemoved);
       toast(t("itemDeleted"));
     },
-    [t, toast],
+    [publishMenu, t, toast],
   );
 
   const resetMenu = useCallback(() => {
-    setItems(mergeCatalog(null));
+    const nextItems = mergeCatalog(null);
+    removedRef.current = [];
+    itemsRef.current = nextItems;
+    setRemovedIds([]);
+    setItems(nextItems);
+    publishMenu(nextItems, []);
     toast(t("menuReset"));
-  }, [t, toast]);
+  }, [publishMenu, t, toast]);
 
   const restoreBackup = useCallback(
     (data) => {
@@ -345,7 +471,13 @@ export function AppProvider({ children }) {
       }
       const nextSettings = mergeSettings(data.settings);
       const maxBill = data.bills.reduce((max, bill) => Math.max(max, Number(bill.billNo) || 0), 0);
-      setItems(cleanItems);
+      const keptRemoved = removedIds.filter((id) => !cleanItems.some((item) => item.id === id));
+      const nextItems = mergeCatalog(cleanItems, keptRemoved);
+      removedRef.current = keptRemoved;
+      itemsRef.current = nextItems;
+      setRemovedIds(keptRemoved);
+      setItems(nextItems);
+      publishMenu(nextItems, keptRemoved);
       setBills(data.bills);
       setSettings(nextSettings);
       setDraft(sanitizeDraft(data.draft, nextSettings));
@@ -353,7 +485,7 @@ export function AppProvider({ children }) {
       toast(t("restored"));
       return true;
     },
-    [t, toast],
+    [publishMenu, removedIds, t, toast],
   );
 
   const unlockAdmin = useCallback((pin) => {
@@ -382,11 +514,14 @@ export function AppProvider({ children }) {
         toast(t("pinMismatch"), "err");
         return false;
       }
+      const previousPin = settings.pin;
+      settingsRef.current = { ...settingsRef.current, pin: newPin };
       updateSettings({ pin: newPin });
+      publishMenu(itemsRef.current, removedRef.current, { pin: previousPin, nextPin: newPin });
       toast(t("pinChanged"));
       return true;
     },
-    [settings.pin, t, toast, updateSettings],
+    [publishMenu, settings.pin, t, toast, updateSettings],
   );
 
   const value = {
