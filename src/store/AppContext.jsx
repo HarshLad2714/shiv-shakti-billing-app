@@ -92,12 +92,42 @@ function storedRemovedIds() {
   return Array.isArray(raw) ? raw.filter((id) => typeof id === "string" && id) : [];
 }
 
+function makeOrder(seq, settings, draft = newDraft(settings)) {
+  return { id: crypto.randomUUID(), seq, note: "", draft };
+}
+
+function loadOpenOrders(settings) {
+  const saved = load(KEYS.openOrders, null);
+  const fallback = sanitizeDraft(load(KEYS.draft, null), settings);
+  const orders = Array.isArray(saved?.orders)
+    ? saved.orders
+        .map((order, index) => ({
+          id: typeof order?.id === "string" && order.id ? order.id : crypto.randomUUID(),
+          seq: Number(order?.seq) > 0 ? Number(order.seq) : index + 1,
+          note: typeof order?.note === "string" ? order.note.slice(0, 32) : "",
+          draft: sanitizeDraft(order?.draft, settings),
+        }))
+        .filter((order) => order.id)
+    : [];
+  if (!orders.length) {
+    const first = makeOrder(1, settings, fallback);
+    return { orders: [first], activeId: first.id, seq: 1, draft: first.draft };
+  }
+  const activeId = orders.some((order) => order.id === saved.activeId) ? saved.activeId : orders[0].id;
+  const seq = Math.max(Number(saved.seq) || 1, ...orders.map((order) => order.seq));
+  return { orders, activeId, seq, draft: orders.find((order) => order.id === activeId).draft };
+}
+
 export function AppProvider({ children }) {
   const [removedIds, setRemovedIds] = useState(storedRemovedIds);
   const [items, setItems] = useState(() => mergeCatalog(load(KEYS.items, null), storedRemovedIds()));
   const [bills, setBills] = useState(() => load(KEYS.bills, []));
   const [settings, setSettings] = useState(() => mergeSettings(load(KEYS.settings, null)));
-  const [draft, setDraft] = useState(() => sanitizeDraft(load(KEYS.draft, null), mergeSettings(load(KEYS.settings, null))));
+  const [openOrders] = useState(() => loadOpenOrders(mergeSettings(load(KEYS.settings, null))));
+  const [orders, setOrders] = useState(openOrders.orders);
+  const [activeOrderId, setActiveOrderId] = useState(openOrders.activeId);
+  const [orderSeq, setOrderSeq] = useState(openOrders.seq);
+  const [draft, setDraft] = useState(openOrders.draft);
   const [nextBillNo, setNextBillNo] = useState(() => {
     const stored = load(KEYS.seq, 1);
     return Number(stored) > 0 ? Number(stored) : 1;
@@ -145,6 +175,18 @@ export function AppProvider({ children }) {
   useEffect(() => {
     save(KEYS.draft, draft);
   }, [draft]);
+  useEffect(() => {
+    save(KEYS.openOrders, { orders, activeId: activeOrderId, seq: orderSeq });
+  }, [orders, activeOrderId, orderSeq]);
+  useEffect(() => {
+    setOrders((current) => {
+      const index = current.findIndex((order) => order.id === activeOrderId);
+      if (index < 0 || current[index].draft === draft) return current;
+      const next = current.slice();
+      next[index] = { ...current[index], draft };
+      return next;
+    });
+  }, [draft, activeOrderId]);
   useEffect(() => {
     save(KEYS.seq, nextBillNo);
   }, [nextBillNo]);
@@ -435,6 +477,77 @@ export function AppProvider({ children }) {
     setLastAddedId("");
   }, [settings]);
 
+  const startNextCustomer = useCallback(() => {
+    if (!draft.lines.length) {
+      toast(t("addItemsFirst"), "err");
+      return;
+    }
+    const created = makeOrder(orderSeq + 1, settings);
+    setOrders((current) => [...current.map((order) => (order.id === activeOrderId ? { ...order, draft } : order)), created]);
+    setActiveOrderId(created.id);
+    setOrderSeq(created.seq);
+    setDraft(created.draft);
+    setLastAddedId("");
+  }, [activeOrderId, draft, orderSeq, settings, t, toast]);
+
+  const switchOrder = useCallback(
+    (id) => {
+      if (id === activeOrderId) return;
+      const target = orders.find((order) => order.id === id);
+      if (!target) return;
+      setOrders((current) => current.map((order) => (order.id === activeOrderId ? { ...order, draft } : order)));
+      setActiveOrderId(id);
+      setDraft(sanitizeDraft(target.draft, settings));
+      setLastAddedId("");
+    },
+    [activeOrderId, draft, orders, settings],
+  );
+
+  const updateOrderNote = useCallback(
+    (note) => {
+      const clean = String(note || "").slice(0, 32);
+      setOrders((current) => current.map((order) => (order.id === activeOrderId ? { ...order, note: clean } : order)));
+    },
+    [activeOrderId],
+  );
+
+  const removeOrder = useCallback(
+    (id) => {
+      const rest = orders.filter((order) => order.id !== id);
+      if (!rest.length) {
+        const cleared = newDraft(settings);
+        setOrders((current) => current.map((order) => (order.id === id ? { ...order, note: "", draft: cleared } : order)));
+        setDraft(cleared);
+        setLastAddedId("");
+        return;
+      }
+      setOrders(rest);
+      if (id === activeOrderId) {
+        const next = rest[rest.length - 1];
+        setActiveOrderId(next.id);
+        setDraft(sanitizeDraft(next.draft, settings));
+      }
+      setLastAddedId("");
+    },
+    [activeOrderId, orders, settings],
+  );
+
+  const finishActiveOrder = useCallback(() => {
+    const rest = orders.filter((order) => order.id !== activeOrderId);
+    if (rest.length) {
+      const next = rest[rest.length - 1];
+      setOrders(rest);
+      setActiveOrderId(next.id);
+      setDraft(sanitizeDraft(next.draft, settings));
+      return;
+    }
+    const created = makeOrder(orderSeq + 1, settings);
+    setOrders([created]);
+    setActiveOrderId(created.id);
+    setOrderSeq(created.seq);
+    setDraft(created.draft);
+  }, [activeOrderId, orderSeq, orders, settings]);
+
   const saveBill = useCallback(() => {
     if (!cart.lines.length) {
       toast(t("emptyCart"), "err");
@@ -483,11 +596,11 @@ export function AppProvider({ children }) {
       return next;
     });
     setNextBillNo((current) => current + 1);
-    setDraft(newDraft(settings));
+    finishActiveOrder();
     setLastAddedId("");
     toast(`${t("billSaved")} #${String(bill.billNo).padStart(4, "0")}`);
     return bill;
-  }, [cart, draft, nextBillNo, publishBills, settings, t, toast]);
+  }, [cart, draft, finishActiveOrder, nextBillNo, publishBills, t, toast]);
 
   const requestPrint = useCallback((bill) => {
     setPrintBill(bill);
@@ -593,8 +706,12 @@ export function AppProvider({ children }) {
       setBills(nextBills);
       queueMicrotask(() => publishBills(nextBills));
       setSettings(nextSettings);
-      setDraft(sanitizeDraft(data.draft, nextSettings));
       setNextBillNo(Math.max(Number(data.nextBillNo) || 1, maxBill + 1));
+      const restored = makeOrder(1, nextSettings, sanitizeDraft(data.draft, nextSettings));
+      setOrders([restored]);
+      setActiveOrderId(restored.id);
+      setOrderSeq(1);
+      setDraft(restored.draft);
       toast(t("restored"));
       return true;
     },
@@ -642,6 +759,8 @@ export function AppProvider({ children }) {
     bills,
     settings,
     draft,
+    orders,
+    activeOrderId,
     cart,
     nextBillNo,
     toasts,
@@ -658,6 +777,10 @@ export function AppProvider({ children }) {
     setQty,
     removeLine,
     clearDraft,
+    startNextCustomer,
+    switchOrder,
+    updateOrderNote,
+    removeOrder,
     saveBill,
     requestPrint,
     saveItem,

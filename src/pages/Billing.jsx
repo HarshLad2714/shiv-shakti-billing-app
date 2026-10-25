@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CategoryTabs from "../components/CategoryTabs";
 import BillPanel from "../components/BillPanel";
 import ItemGrid from "../components/ItemGrid";
+import OpenOrderBar from "../components/OpenOrderBar";
 import Modal from "../components/Modal";
 import { orderedCategories } from "../data/menu";
 import { useApp } from "../store/AppContext";
 import { billPlainText, cn, inr, padBill, whatsappUrl } from "../utils/format";
 
 export default function Billing() {
-  const { items, draft, cart, settings, updateSettings, addQty, requestPrint, t } = useApp();
+  const { items, draft, orders, cart, settings, updateSettings, addQty, requestPrint, t } = useApp();
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -43,7 +44,6 @@ export default function Billing() {
     const qtyFor = (unit) => lines.find((line) => (line.unit === "piece" ? "plate" : line.unit) === unit)?.qty || 0;
     return { plate: qtyFor("plate"), cheese: qtyFor("cheese"), kg: qtyFor("kg"), litre: qtyFor("litre") };
   };
-  const totalQtyLabel = draft.lines.length;
 
   useEffect(() => {
     const onKey = (event) => {
@@ -73,6 +73,9 @@ export default function Billing() {
               </button>
             </div>
           )}
+          <div className="lg:hidden">
+            <OpenOrderBar />
+          </div>
           <div className="relative">
             <label className="sr-only" htmlFor="item-search">
               {t("searchPlaceholder")}
@@ -117,7 +120,7 @@ export default function Billing() {
         onClick={() => setOpen(true)}
       >
         <span className="font-semibold">
-          {t("openCart")} · {totalQtyLabel}
+          {t("openOrders")} · {orders.length}
         </span>
         <span key={draft.lines.length} className="animate-pop font-display text-2xl text-gold">
           {inr(cart.grandTotal)}

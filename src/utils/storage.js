@@ -3,6 +3,7 @@ export const KEYS = {
   bills: "shivshakti.v1.bills",
   settings: "shivshakti.v1.settings",
   draft: "shivshakti.v1.draft",
+  openOrders: "shivshakti.v1.openOrders",
   seq: "shivshakti.v1.seq",
   removed: "shivshakti.v1.removed",
   menuUpdatedAt: "shivshakti.v1.menuUpdatedAt",

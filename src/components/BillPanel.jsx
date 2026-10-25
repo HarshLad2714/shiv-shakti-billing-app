@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useApp } from "../store/AppContext";
-import { cn, inr, padBill } from "../utils/format";
+import { cn, inr } from "../utils/format";
 import BillRow from "./BillRow";
 import Modal from "./Modal";
+import OpenOrderBar from "./OpenOrderBar";
 import TotalsBox from "./TotalsBox";
 
 const MODES = ["Cash", "UPI", "Card"];
@@ -11,16 +12,20 @@ export default function BillPanel({ onDone, onSaved }) {
   const {
     cart,
     draft,
-    nextBillNo,
     settings,
     lastAddedId,
     t,
     updateDraft,
     setQty,
     removeLine,
+    orders,
+    activeOrderId,
     clearDraft,
+    updateOrderNote,
     saveBill,
   } = useApp();
+  const activeOrder = orders.find((order) => order.id === activeOrderId) || orders[0];
+  const orderLabel = activeOrder?.note?.trim() || `${t("orderWord")} ${activeOrder?.seq || 1}`;
   const [confirmClear, setConfirmClear] = useState(false);
   const received = Number(draft.received);
   const cashShort = draft.paymentMode === "Cash" && draft.received !== "" && Number.isFinite(received) && received < cart.grandTotal;
@@ -34,12 +39,21 @@ export default function BillPanel({ onDone, onSaved }) {
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col">
+    <section className="flex h-full min-h-0 flex-col gap-2">
+      <OpenOrderBar />
       <div className="receipt-top flex min-h-0 flex-1 flex-col rounded-t-3xl px-4 pb-3 pt-5 text-ink shadow-lift">
         <div className="mb-2 flex items-end justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-saffronDeep">{t("currentBill")}</p>
-            <h2 className="font-display text-2xl leading-none">#{padBill(nextBillNo)}</h2>
+            <h2 className="truncate font-display text-2xl leading-none">{orderLabel}</h2>
+            <p className="mt-1 text-xs font-semibold text-cocoa">{t("payAtEnd")}</p>
+            <input
+              className="mt-2 h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm"
+              value={activeOrder?.note || ""}
+              placeholder={t("orderNote")}
+              aria-label={t("orderNote")}
+              onChange={(event) => updateOrderNote(event.target.value)}
+            />
           </div>
           <p className="text-sm font-semibold text-cocoa">
             {cart.itemCount} {cart.itemCount === 1 ? t("billItem") : t("billItems")}
