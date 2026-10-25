@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "../components/Modal";
-import { CATEGORIES, orderedCategories, rateMode, uniqueId } from "../data/menu";
+import { CATEGORIES, orderedCategories, packUnit, rateMode, uniqueId } from "../data/menu";
 import { useApp } from "../store/AppContext";
 import { cn, inr, todayKey } from "../utils/format";
 import { downloadFile } from "../utils/storage";
@@ -11,7 +11,7 @@ function moneyLabel(value) {
 
 function rateSummary(item, t) {
   const mode = rateMode(item.category);
-  const plateName = item.category === "Beverages" ? t("glass") : item.offersCheese ? t("plain") : t("plate");
+  const plateName = item.category === "Beverages" ? t("glass") : item.category === "Cold Drinks" ? t(packUnit(item)) : item.offersCheese ? t("plain") : t("plate");
   const plate = `${plateName} ${moneyLabel(item.platePrice)}`;
   if (mode === "kg") return `${plate} · ${t("kg")} ${moneyLabel(item.kgPrice)}`;
   if (mode === "litre") return `${plate} · ${t("litre")} ${moneyLabel(item.litrePrice)}`;
@@ -360,7 +360,7 @@ function AdminDesk() {
                 <input className="field" value={form.newCategory} onChange={(event) => setForm({ ...form, newCategory: event.target.value })} required />
               </Field>
             )}
-            <Field label={form.category === "Beverages" ? t("glassRate") : form.offersCheese ? t("plainRate") : t("plateRate")}>
+            <Field label={form.category === "Beverages" ? t("glassRate") : form.category === "Cold Drinks" ? t(/tin|ટિન/i.test(`${form.name} ${form.nameGu}`) ? "tinRate" : "bottleRate") : form.offersCheese ? t("plainRate") : t("plateRate")}>
               <input className="field" inputMode="decimal" placeholder={t("optional")} value={form.platePrice} onChange={(event) => setForm({ ...form, platePrice: event.target.value })} />
             </Field>
             {rateMode(form.category) === "kg" && (
@@ -373,7 +373,7 @@ function AdminDesk() {
                 <input className="field" inputMode="decimal" placeholder={t("optional")} value={form.litrePrice} onChange={(event) => setForm({ ...form, litrePrice: event.target.value })} />
               </Field>
             )}
-            {rateMode(form.category) === "plate" && (
+            {rateMode(form.category) === "plate" && form.category !== "Cold Drinks" && (
               <label className="flex min-h-11 items-center gap-2 text-sm font-semibold sm:col-span-2">
                 <input type="checkbox" checked={form.offersCheese} onChange={(event) => setForm({ ...form, offersCheese: event.target.checked })} />
                 {t("cheeseOption")}

@@ -12,6 +12,7 @@ export const CATEGORIES = [
   "Dhokla",
   "Uppam",
   "Beverages",
+  "Cold Drinks",
 ];
 
 export const CATEGORY_META = {
@@ -28,6 +29,7 @@ export const CATEGORY_META = {
   Dhokla: { icon: "🍲" },
   Uppam: { icon: "🍛" },
   Beverages: { icon: "🥤" },
+  "Cold Drinks": { icon: "🧊" },
 };
 
 export const CATEGORY_LABELS = {
@@ -45,6 +47,7 @@ export const CATEGORY_LABELS = {
     Dhokla: "ઢોકળા",
     Uppam: "ઉપ્પમ",
     Beverages: "પીણાં",
+    "Cold Drinks": "કોલ્ડ ડ્રિંક્સ",
   },
 };
 
@@ -119,6 +122,16 @@ const ROWS = [
   ["Beverages", "Iced Tea", "આઇસ્ડ ટી", 0, "litre", { platePrice: null, litrePrice: null, needsReview: true }],
   ["Beverages", "Masala Chaas", "મસાલા છાશ", 80, "litre"],
   ["Beverages", "Hot Chocolate", "હોટ ચોકલેટ", 180, "litre", { platePrice: 30, litrePrice: 180 }],
+  ["Cold Drinks", "Coca Cola", "કોકા કોલા", 20, "plate"],
+  ["Cold Drinks", "Fanta", "ફેન્ટા", 20, "plate"],
+  ["Cold Drinks", "Sprite", "સ્પ્રાઇટ", 20, "plate"],
+  ["Cold Drinks", "Thums Up", "થમ્સ અપ", 20, "plate"],
+  ["Cold Drinks", "Maaza", "માઝા", 20, "plate"],
+  ["Cold Drinks", "Water Bottle 20", "પાણીની બોટલ 20", 20, "plate"],
+  ["Cold Drinks", "Water Bottle 10", "પાણીની બોટલ 10", 10, "plate"],
+  ["Cold Drinks", "Coca Cola Tin", "કોકા કોલા ટિન", 50, "plate"],
+  ["Cold Drinks", "Diet Coca Cola Tin", "ડાયટ કોકા કોલા ટિન", 50, "plate"],
+  ["Cold Drinks", "Sprite Tin", "સ્પ્રાઇટ ટિન", 50, "plate"],
   ["Snacks", "French Fries Regular", "ફ્રેન્ચ ફ્રાઈઝ રેગ્યુલર", 0, "piece", { hidden: true, needsReview: true }],
   ["Snacks", "French Fries Peri Peri", "ફ્રેન્ચ ફ્રાઈઝ પેરી પેરી", 0, "piece", { hidden: true, needsReview: true }],
   ["Snacks", "French Fries Cheese", "ફ્રેન્ચ ફ્રાઈઝ ચીઝ", 0, "piece", { hidden: true, needsReview: true }],
@@ -226,9 +239,14 @@ function applySaleMode(item) {
   };
 }
 
+export function packUnit(item) {
+  if (item?.category !== "Cold Drinks") return "plate";
+  return /tin|ટિન/i.test(`${item.name || ""} ${item.nameGu || ""}`) ? "tin" : "bottle";
+}
+
 export function sellOptions(item) {
   const mode = rateMode(item.category);
-  const options = [{ unit: "plate", price: item.platePrice }];
+  const options = [{ unit: item.category === "Cold Drinks" ? packUnit(item) : "plate", price: item.platePrice }];
   if (mode === "kg") options.push({ unit: "kg", price: item.kgPrice });
   if (mode === "litre") options.push({ unit: "litre", price: item.litrePrice });
   if (item.offersCheese) options.push({ unit: "cheese", price: item.cheesePrice });

@@ -39,32 +39,33 @@ export default function BillPanel({ onDone, onSaved }) {
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col gap-2">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
       <OpenOrderBar />
-      <div className="receipt-top flex min-h-0 flex-1 flex-col rounded-t-3xl px-4 pb-3 pt-5 text-ink shadow-lift">
-        <div className="mb-2 flex items-end justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-saffronDeep">{t("currentBill")}</p>
-            <h2 className="truncate font-display text-2xl leading-none">{orderLabel}</h2>
-            <p className="mt-1 text-xs font-semibold text-cocoa">{t("payAtEnd")}</p>
-            <input
-              className="mt-2 h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm"
-              value={activeOrder?.note || ""}
-              placeholder={t("orderNote")}
-              aria-label={t("orderNote")}
-              onChange={(event) => updateOrderNote(event.target.value)}
-            />
+      <div className="receipt-top flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl text-ink shadow-lift">
+        <div className="shrink-0 space-y-2 px-4 pb-2 pt-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wide text-saffronDeep">{t("currentBill")}</p>
+              <h2 className="truncate font-display text-2xl leading-tight">{orderLabel}</h2>
+              <p className="text-xs font-semibold text-cocoa">{t("payAtEnd")}</p>
+            </div>
+            <p className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-semibold text-cocoa">
+              {cart.itemCount} {cart.itemCount === 1 ? t("billItem") : t("billItems")}
+            </p>
           </div>
-          <p className="text-sm font-semibold text-cocoa">
-            {cart.itemCount} {cart.itemCount === 1 ? t("billItem") : t("billItems")}
-          </p>
+          <input
+            className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-base"
+            value={activeOrder?.note || ""}
+            placeholder={t("orderNote")}
+            aria-label={t("orderNote")}
+            onChange={(event) => updateOrderNote(event.target.value)}
+          />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="min-h-[6.25rem] flex-1 overflow-y-auto px-4">
           {cart.lines.length === 0 ? (
-            <div className="grid h-full min-h-40 place-items-center px-6 text-center text-cocoa">
-              <p>{t("emptyBill")}</p>
-            </div>
+            <p className="py-5 text-center text-sm leading-relaxed text-cocoa">{t("emptyBill")}</p>
           ) : (
             cart.lines.map((line) => (
               <BillRow
@@ -79,12 +80,12 @@ export default function BillPanel({ onDone, onSaved }) {
           )}
         </div>
 
-        <div className="mt-3 space-y-3 border-t border-dashed border-black/15 pt-3">
+        <div className="shrink-0 space-y-2 border-t border-dashed border-black/15 px-4 py-3">
           <TotalsBox cart={cart} t={t} />
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold">{t("discount")}</span>
-            <div className="ml-auto flex rounded-xl bg-paper p-1">
+            <div className="flex rounded-xl bg-paper p-1">
               {[
                 ["flat", "₹"],
                 ["percent", "%"],
@@ -93,7 +94,7 @@ export default function BillPanel({ onDone, onSaved }) {
                   key={type}
                   type="button"
                   onClick={() => updateDraft({ discountType: type })}
-                  className={cn("h-9 min-w-10 rounded-lg px-2 text-sm font-bold", draft.discountType === type ? "bg-ink text-gold" : "text-cocoa")}
+                  className={cn("h-10 min-w-11 rounded-lg px-2 text-sm font-bold", draft.discountType === type ? "bg-ink text-gold" : "text-cocoa")}
                 >
                   {label}
                 </button>
@@ -102,13 +103,10 @@ export default function BillPanel({ onDone, onSaved }) {
             <input
               inputMode="decimal"
               aria-label={t("discount")}
-              className="h-11 w-24 rounded-xl border border-black/10 bg-white px-2 text-right text-base font-semibold tabular-nums"
+              className="h-11 min-w-24 flex-1 rounded-xl border border-black/10 bg-white px-3 text-right text-base font-semibold tabular-nums"
               value={draft.discountValue}
               onChange={(event) => updateDraft({ discountValue: event.target.value.replace(/[^\d.]/g, "") })}
             />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
             <Toggle on={draft.gstEnabled} label={t("gst")} onClick={() => updateDraft({ gstEnabled: !draft.gstEnabled })} />
             {draft.gstEnabled && (
               <input
@@ -122,12 +120,11 @@ export default function BillPanel({ onDone, onSaved }) {
             <Toggle on={draft.roundOff} label={t("roundOff")} onClick={() => updateDraft({ roundOff: !draft.roundOff })} />
           </div>
         </div>
-      </div>
 
-      <div className="space-y-3 rounded-b-3xl bg-ink p-3 text-white">
+      <div className="shrink-0 space-y-2 rounded-b-3xl bg-ink px-4 pb-3 pt-3 text-white">
         <div className="flex items-end justify-between gap-3">
-          <span className="text-xs font-bold uppercase tracking-[0.14em] text-white/60">{t("grandTotal")}</span>
-          <span key={cart.grandTotal} className="animate-pop font-display text-4xl leading-none text-gold tabular-nums">
+          <span className="text-xs font-bold uppercase tracking-wide text-white/60">{t("grandTotal")}</span>
+          <span key={cart.grandTotal} className="animate-pop shrink-0 font-display text-3xl leading-none text-gold tabular-nums">
             {inr(cart.grandTotal)}
           </span>
         </div>
@@ -166,7 +163,6 @@ export default function BillPanel({ onDone, onSaved }) {
             <p className={cn("mt-1 text-right text-sm font-semibold", cashShort ? "text-red-300" : "text-gold")}>
               {cashShort ? `${t("shortBy")} ${inr(cart.grandTotal - received)}` : `${t("change")} ${inr(Math.max(change, 0))}`}
             </p>
-            <p className="text-right text-[11px] text-white/50">{t("exactHint")}</p>
           </div>
         )}
 
@@ -181,6 +177,8 @@ export default function BillPanel({ onDone, onSaved }) {
         <button type="button" className="btn w-full bg-white text-ink" onClick={() => checkout(false)}>
           {t("save")}
         </button>
+      </div>
+      </div>
       </div>
 
       <Modal open={confirmClear} title={t("confirmClearTitle")} onClose={() => setConfirmClear(false)}>

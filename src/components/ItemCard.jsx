@@ -22,11 +22,15 @@ export default function ItemCard({ item, qty = {}, language, onAdd, t }) {
   const disabled = !item.available;
   const options = sellOptions(item);
   const plateQty = qty.plate || 0;
+  const bottleQty = qty.bottle || 0;
+  const tinQty = qty.tin || 0;
   const kgQty = qty.kg || 0;
   const litreQty = qty.litre || 0;
   const cheeseQty = qty.cheese || 0;
   const badges = [
     plateQty > 0 ? formatQty(plateQty, "plate", language) : "",
+    bottleQty > 0 ? formatQty(bottleQty, "bottle", language) : "",
+    tinQty > 0 ? formatQty(tinQty, "tin", language) : "",
     cheeseQty > 0 ? formatQty(cheeseQty, "cheese", language) : "",
     kgQty > 0 ? formatQty(kgQty, "kg") : "",
     litreQty > 0 ? formatQty(litreQty, "litre") : "",
@@ -58,19 +62,34 @@ export default function ItemCard({ item, qty = {}, language, onAdd, t }) {
       <div className={cn("grid gap-1 px-2 pb-2", options.length > 2 ? "grid-cols-3" : options.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
         {options.map((option) => {
           const ready = Number(option.price) > 0;
-          const amount = option.unit === "plate" ? plateQty : option.unit === "cheese" ? cheeseQty : option.unit === "kg" ? kgQty : litreQty;
+          const amount =
+            option.unit === "plate"
+              ? plateQty
+              : option.unit === "bottle"
+                ? bottleQty
+                : option.unit === "tin"
+                  ? tinQty
+                  : option.unit === "cheese"
+                    ? cheeseQty
+                    : option.unit === "kg"
+                      ? kgQty
+                      : litreQty;
           const label =
             option.unit === "cheese"
               ? t("cheese")
-              : option.unit === "plate" && item.offersCheese
-                ? t("plain")
-                : option.unit === "plate"
-                  ? item.category === "Beverages"
-                    ? t("glass")
-                    : t("plate")
-                  : option.unit === "kg"
-                    ? "Kg"
-                    : "L";
+              : option.unit === "bottle"
+                ? t("bottle")
+                : option.unit === "tin"
+                  ? t("tin")
+                  : option.unit === "plate" && item.offersCheese
+                    ? t("plain")
+                    : option.unit === "plate"
+                      ? item.category === "Beverages"
+                        ? t("glass")
+                        : t("plate")
+                      : option.unit === "kg"
+                        ? "Kg"
+                        : "L";
           return (
             <button
               key={option.unit}

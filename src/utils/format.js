@@ -76,6 +76,8 @@ export function formatQty(qty, unit, language = "en") {
     return `${trimmed} L`;
   }
   if (unit === "cheese") return `${trimmed} ${language === "gu" ? "ચીઝ" : "cheese"}`;
+  if (unit === "bottle") return `${trimmed} ${language === "gu" ? "બોટલ" : "bottle"}`;
+  if (unit === "tin") return `${trimmed} ${language === "gu" ? "ટિન" : "tin"}`;
   return `${trimmed} ${language === "gu" ? "પ્લેટ" : "plate"}`;
 }
 

@@ -34,43 +34,64 @@ export default function BillRow({ line, active, language, onSetQty, onRemove }) 
     onSetQty(next);
   };
 
+  const unitLabel =
+    line.unit === "kg"
+      ? "kg"
+      : line.unit === "litre"
+        ? "L"
+        : line.unit === "cheese"
+          ? language === "gu"
+            ? "ચીઝ"
+            : "cheese"
+          : line.unit === "bottle"
+            ? language === "gu"
+              ? "બોટલ"
+              : "bottle"
+            : line.unit === "tin"
+              ? language === "gu"
+                ? "ટિન"
+                : "tin"
+              : language === "gu"
+                ? "પ્લેટ"
+                : "plate";
+
   return (
-    <div className={cn("border-b border-dashed border-black/10 py-3", active && "animate-pop")}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-semibold leading-snug">{name}</div>
+    <div className={cn("border-b border-dashed border-black/10 py-2.5 last:border-b-0", active && "animate-pop")}>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-semibold leading-snug">{name}</div>
           <div className="text-xs text-cocoa">
-            {inr(line.price)} · {line.unit === "kg" ? "kg" : line.unit === "litre" ? "L" : line.unit === "cheese" ? (language === "gu" ? "ચીઝ" : "cheese") : language === "gu" ? "પ્લેટ" : "plate"}
+            {inr(line.price)} · {unitLabel}
           </div>
         </div>
-        <div className="text-right">
+        <div className="flex shrink-0 items-center gap-1">
+          <button type="button" className="grid h-10 w-10 place-items-center rounded-xl bg-paper text-xl font-bold" onClick={() => onSetQty(line.qty - step)} aria-label="Decrease">
+            −
+          </button>
+          <input
+            inputMode="decimal"
+            className="h-10 w-12 rounded-xl border border-black/10 bg-white text-center text-base font-semibold tabular-nums"
+            value={text}
+            aria-label={`${name} quantity`}
+            onChange={(event) => setText(event.target.value)}
+            onBlur={commit}
+            onFocus={(event) => event.target.select()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+          />
+          <button type="button" className="grid h-10 w-10 place-items-center rounded-xl bg-ink text-xl font-bold text-gold" onClick={() => onSetQty(line.qty + step)} aria-label="Increase">
+            +
+          </button>
+        </div>
+        <div className="w-20 shrink-0 text-right">
           <div className="font-bold tabular-nums">{inr(line.amount)}</div>
-          <button type="button" onClick={onRemove} className="mt-1 grid h-8 w-8 place-items-center rounded-full text-lg text-cocoa hover:bg-red-50 hover:text-red-600" aria-label={`Remove ${name}`}>
+          <button type="button" onClick={onRemove} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-lg text-cocoa hover:bg-red-50 hover:text-red-600" aria-label={`Remove ${name}`}>
             ×
           </button>
         </div>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <button type="button" className="grid h-11 w-11 place-items-center rounded-xl bg-paper text-xl font-bold" onClick={() => onSetQty(line.qty - step)} aria-label="Decrease">
-          −
-        </button>
-        <input
-          inputMode="decimal"
-          className="h-11 w-20 rounded-xl border border-black/10 bg-white text-center text-base font-semibold tabular-nums"
-          value={text}
-          aria-label={`${name} quantity`}
-          onChange={(event) => setText(event.target.value)}
-          onBlur={commit}
-          onFocus={(event) => event.target.select()}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-          }}
-        />
-        <button type="button" className="grid h-11 w-11 place-items-center rounded-xl bg-ink text-xl font-bold text-gold" onClick={() => onSetQty(line.qty + step)} aria-label="Increase">
-          +
-        </button>
-        <span className="ml-1 text-sm font-semibold text-cocoa">{formatQty(line.qty, line.unit)}</span>
-      </div>
+      {(line.unit === "kg" || line.unit === "litre") && <p className="mt-1 text-xs font-semibold text-cocoa">{formatQty(line.qty, line.unit, language)}</p>}
       {chips && (
         <div className="mt-2 flex gap-1.5">
           {chips.map((chip) => (

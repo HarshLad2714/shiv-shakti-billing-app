@@ -42,7 +42,7 @@ export default function Billing() {
   const qtyOf = (id) => {
     const lines = draft.lines.filter((line) => line.itemId === id);
     const qtyFor = (unit) => lines.find((line) => (line.unit === "piece" ? "plate" : line.unit) === unit)?.qty || 0;
-    return { plate: qtyFor("plate"), cheese: qtyFor("cheese"), kg: qtyFor("kg"), litre: qtyFor("litre") };
+    return { plate: qtyFor("plate"), bottle: qtyFor("bottle"), tin: qtyFor("tin"), cheese: qtyFor("cheese"), kg: qtyFor("kg"), litre: qtyFor("litre") };
   };
 
   useEffect(() => {
@@ -130,8 +130,10 @@ export default function Billing() {
       {open && (
         <div className="no-print fixed inset-0 z-40 lg:hidden">
           <button type="button" className="absolute inset-0 bg-ink/55" aria-label={t("close")} onClick={() => setOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 h-[92dvh] p-2">
-            <BillPanel onDone={() => setOpen(false)} onSaved={onSaved} />
+          <div className="absolute inset-x-0 bottom-0 top-0 flex p-2 pb-12">
+            <div className="min-h-0 min-w-0 flex-1">
+              <BillPanel onDone={() => setOpen(false)} onSaved={onSaved} />
+            </div>
           </div>
         </div>
       )}
