@@ -18,12 +18,6 @@
   force = true
 
 [[redirects]]
-  from = "/api/orders"
-  to = "/.netlify/functions/orders"
-  status = 200
-  force = true
-
-[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

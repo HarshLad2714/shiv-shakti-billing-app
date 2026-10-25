@@ -8,7 +8,7 @@ export default function ItemGrid({ groups, flat, language, qtyOf, onAdd, t }) {
 
   if (groups.length === 1 && groups[0].flat) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4">
         {flat.map((item) => (
           <ItemCard key={item.id} item={item} qty={qtyOf(item.id)} language={language} onAdd={(unit, delta) => onAdd(item.id, unit, delta)} t={t} />
         ))}
@@ -21,7 +21,7 @@ export default function ItemGrid({ groups, flat, language, qtyOf, onAdd, t }) {
       {groups.map((group) => (
         <section key={group.category} aria-label={group.category}>
           <h2 className="mb-2 font-display text-xl">{categoryLabel(group.category, language)}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {group.items.map((item) => (
               <ItemCard key={item.id} item={item} qty={qtyOf(item.id)} language={language} onAdd={(unit, delta) => onAdd(item.id, unit, delta)} t={t} />
             ))}

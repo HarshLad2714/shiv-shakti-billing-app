@@ -108,10 +108,10 @@ export default function Reports() {
               {t(label)}
             </button>
           ))}
-          <label className="text-sm font-semibold">
+          <label className="min-w-0 text-sm font-semibold">
             {t("from")}
             <input
-              className="field mt-1"
+              className="field mt-1 w-full min-w-0 sm:w-40"
               type="date"
               value={from}
               onChange={(event) => {
@@ -120,10 +120,10 @@ export default function Reports() {
               }}
             />
           </label>
-          <label className="text-sm font-semibold">
+          <label className="min-w-0 text-sm font-semibold">
             {t("to")}
             <input
-              className="field mt-1"
+              className="field mt-1 w-full min-w-0 sm:w-40"
               type="date"
               value={to}
               onChange={(event) => {

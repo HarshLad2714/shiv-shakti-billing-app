@@ -25,8 +25,8 @@ export default function History() {
           <p className="text-sm text-cocoa">{filtered.length}</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <input className="field sm:w-64" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("searchBills")} />
-          <input className="field sm:w-44" type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label={t("date")} />
+          <input className="field w-full min-w-0 sm:w-64" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("searchBills")} />
+          <input className="field w-full min-w-0 sm:w-44" type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label={t("date")} />
           {date && (
             <button type="button" className="btn-ghost" onClick={() => setDate("")}>
               {t("allDates")}

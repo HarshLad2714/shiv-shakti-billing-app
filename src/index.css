@@ -9,6 +9,10 @@
     height: 100%;
   }
 
+  html {
+    overflow-x: clip;
+  }
+
   body {
     @apply bg-paper font-sans text-ink antialiased;
     background-image: radial-gradient(circle at 1px 1px, rgba(20, 17, 15, 0.045) 1px, transparent 0);

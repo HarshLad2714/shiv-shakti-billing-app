@@ -50,9 +50,16 @@ export default function BillPanel({ onDone, onSaved }) {
               <h2 className="truncate font-display text-2xl leading-tight">{orderLabel}</h2>
               <p className="text-xs font-semibold text-cocoa">{t("payAtEnd")}</p>
             </div>
-            <p className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-semibold text-cocoa">
-              {cart.itemCount} {cart.itemCount === 1 ? t("billItem") : t("billItems")}
-            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <p className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-cocoa">
+                {cart.itemCount} {cart.itemCount === 1 ? t("billItem") : t("billItems")}
+              </p>
+              {onDone && (
+                <button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-white text-xl font-bold" onClick={onDone} aria-label={t("close")}>
+                  ×
+                </button>
+              )}
+            </div>
           </div>
           <input
             className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-base"
@@ -63,7 +70,7 @@ export default function BillPanel({ onDone, onSaved }) {
           />
         </div>
 
-        <div className="min-h-[6.25rem] flex-1 overflow-y-auto px-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4">
           {cart.lines.length === 0 ? (
             <p className="py-5 text-center text-sm leading-relaxed text-cocoa">{t("emptyBill")}</p>
           ) : (

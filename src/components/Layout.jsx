@@ -6,15 +6,13 @@ import Logo from "./Logo";
 
 const LINKS = [
   ["/", "billing"],
-  ["/orders", "orders"],
   ["/history", "history"],
   ["/reports", "reports"],
   ["/admin", "admin"],
 ];
 
 export default function Layout() {
-  const { settings, updateSettings, nextBillNo, bills, customerOrders, t } = useApp();
-  const waitingOrders = customerOrders.filter((order) => order.status === "new").length;
+  const { settings, updateSettings, nextBillNo, bills, t } = useApp();
   const todaySales = bills.filter((bill) => istDateKey(bill.dateTime) === todayKey());
   const todayTotal = todaySales.reduce((sum, bill) => sum + Number(bill.grandTotal || 0), 0);
 
@@ -23,11 +21,11 @@ export default function Layout() {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-xl focus:bg-gold focus:px-3 focus:py-2">
         Skip to menu
       </a>
-      <header className="no-print shrink-0 bg-ink text-white">
-        <div className="flex items-center gap-3 px-3 py-2.5 lg:px-5">
-          <Logo className="h-14 w-14 sm:h-16 sm:w-16" />
+      <header className="no-print shrink-0 bg-ink pt-[env(safe-area-inset-top)] text-white">
+        <div className="flex items-center gap-2 px-3 py-2 sm:gap-3 sm:py-2.5 lg:px-5">
+          <Logo className="h-11 w-11 sm:h-16 sm:w-16" />
           <div className="min-w-0">
-            <p className="font-display text-xl leading-none text-gold">Shiv Shakti</p>
+            <p className="font-display text-lg leading-none text-gold sm:text-xl">Shiv Shakti</p>
             <p className="truncate text-xs text-white/70">
               {settings.language === "gu" ? settings.taglineGu : settings.tagline}
             </p>
@@ -65,7 +63,7 @@ export default function Layout() {
             </div>
           </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-2 lg:px-5" aria-label="Primary">
+        <nav className="flex gap-1 overflow-x-auto px-2 pb-2 sm:px-3 lg:px-5" aria-label="Primary">
           {LINKS.map(([to, key]) => (
             <NavLink
               key={to}
@@ -73,17 +71,12 @@ export default function Layout() {
               end={to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold",
+                  "min-h-11 shrink-0 rounded-full px-3 text-sm font-semibold leading-[2.75rem] sm:px-4",
                   isActive ? "bg-gold text-ink" : "text-white/80 hover:bg-white/10",
                 )
               }
             >
               {t(key)}
-              {key === "orders" && waitingOrders > 0 && (
-                <span className="ml-2 inline-grid h-5 min-w-5 place-items-center rounded-full bg-saffron px-1 text-[11px] font-extrabold text-ink">
-                  {waitingOrders}
-                </span>
-              )}
             </NavLink>
           ))}
         </nav>

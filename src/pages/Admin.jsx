@@ -42,7 +42,7 @@ export default function Admin() {
 }
 
 function PinGate() {
-  const { settings, unlockAdmin, t } = useApp();
+  const { unlockAdmin, t } = useApp();
   const [pin, setPin] = useState("");
   const [bad, setBad] = useState(false);
 
@@ -77,10 +77,10 @@ function PinGate() {
   };
 
   return (
-    <div className="grid h-full place-items-center px-4 py-8">
-      <div className={cn("w-full max-w-sm rounded-3xl bg-white p-5 text-center shadow-lift", bad && "animate-shake")}>
+    <div className="grid h-full place-items-center overflow-y-auto px-4 py-6">
+      <div className={cn("w-full max-w-sm rounded-3xl bg-white p-4 text-center shadow-lift sm:p-5", bad && "animate-shake")}>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-saffronDeep">{t("pinTitle")}</p>
-        <h1 className="mt-1 font-display text-3xl">{t("pinHint")}</h1>
+        <h1 className="mt-1 font-display text-2xl sm:text-3xl">{t("pinHint")}</h1>
         <div className="mt-4 flex justify-center gap-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <span key={index} className={cn("h-4 w-4 rounded-full", pin.length > index ? "bg-saffron" : "bg-paper ring-1 ring-black/10")} />
@@ -89,21 +89,20 @@ function PinGate() {
         {bad && <p className="mt-3 text-sm font-semibold text-red-600">{t("wrongPin")}</p>}
         <div className="mt-5 grid grid-cols-3 gap-2">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
-            <button key={digit} type="button" className="min-h-14 rounded-2xl bg-paper text-2xl font-bold" onClick={() => press(digit)}>
+            <button key={digit} type="button" className="min-h-12 rounded-2xl bg-paper text-2xl font-bold sm:min-h-14" onClick={() => press(digit)}>
               {digit}
             </button>
           ))}
-          <button type="button" className="min-h-14 rounded-2xl text-sm font-bold text-cocoa" onClick={() => setPin("")}>
+          <button type="button" className="min-h-12 rounded-2xl text-sm font-bold text-cocoa sm:min-h-14" onClick={() => setPin("")}>
             {t("clear")}
           </button>
-          <button type="button" className="min-h-14 rounded-2xl bg-paper text-2xl font-bold" onClick={() => press("0")}>
+          <button type="button" className="min-h-12 rounded-2xl bg-paper text-2xl font-bold sm:min-h-14" onClick={() => press("0")}>
             0
           </button>
-          <button type="button" className="min-h-14 rounded-2xl text-xl font-bold" onClick={() => setPin((current) => current.slice(0, -1))} aria-label="Backspace">
+          <button type="button" className="min-h-12 rounded-2xl text-xl font-bold sm:min-h-14" onClick={() => setPin((current) => current.slice(0, -1))} aria-label="Backspace">
             ⌫
           </button>
         </div>
-        {settings.pin === "1234" && <p className="mt-4 text-sm text-cocoa">{t("defaultPinNote")}</p>}
       </div>
     </div>
   );

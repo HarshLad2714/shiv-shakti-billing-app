@@ -8,7 +8,6 @@ export const KEYS = {
   removed: "shivshakti.v1.removed",
   menuUpdatedAt: "shivshakti.v1.menuUpdatedAt",
   billsUpdatedAt: "shivshakti.v1.billsUpdatedAt",
-  incomingOrders: "shivshakti.v1.incomingOrders",
 };
 
 export function load(key, fallback) {

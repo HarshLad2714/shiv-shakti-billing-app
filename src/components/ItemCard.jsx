@@ -57,7 +57,7 @@ export default function ItemCard({ item, qty = {}, language, onAdd, t }) {
             {meta.icon}
           </span>
         )}
-        <span className="min-w-0 pt-1 text-[15px] font-semibold leading-snug">{name}</span>
+        <span className="line-clamp-2 min-w-0 pt-1 text-sm font-semibold leading-snug sm:text-[15px]">{name}</span>
       </div>
       <div className={cn("grid gap-1 px-2 pb-2", options.length > 2 ? "grid-cols-3" : options.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
         {options.map((option) => {

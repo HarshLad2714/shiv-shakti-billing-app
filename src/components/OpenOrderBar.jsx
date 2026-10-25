@@ -21,7 +21,8 @@ export default function OpenOrderBar() {
   const [pending, setPending] = useState(null);
 
   return (
-    <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+    <div className="flex items-stretch gap-2">
+      <div className="flex min-w-0 flex-1 items-stretch gap-2 overflow-x-auto pb-1">
       {orders.map((order) => {
         const active = order.id === activeOrderId;
         const count = active ? cart.itemCount : order.draft.lines.length;
@@ -46,6 +47,7 @@ export default function OpenOrderBar() {
           </div>
         );
       })}
+      </div>
       <button type="button" className="btn-primary shrink-0" onClick={startNextCustomer}>
         {t("newCustomer")}
       </button>

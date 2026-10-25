@@ -5,9 +5,7 @@ import PrintBill from "./components/PrintBill";
 import Toasts from "./components/Toasts";
 import Admin from "./pages/Admin";
 import Billing from "./pages/Billing";
-import CustomerOrders from "./pages/CustomerOrders";
 import History from "./pages/History";
-import OrderMenu from "./pages/OrderMenu";
 import Reports from "./pages/Reports";
 import { AppProvider, useApp } from "./store/AppContext";
 
@@ -17,10 +15,8 @@ export default function App() {
       <AppProvider>
         <div className="no-print h-dvh">
           <Routes>
-            <Route path="/order" element={<OrderMenu />} />
             <Route element={<Layout />}>
               <Route path="/" element={<Billing />} />
-              <Route path="/orders" element={<CustomerOrders />} />
               <Route path="/history" element={<History />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/admin" element={<Admin />} />
