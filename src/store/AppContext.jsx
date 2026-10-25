@@ -213,6 +213,17 @@ export function AppProvider({ children }) {
     save(KEYS.menuUpdatedAt, next);
   }, []);
 
+  const applyRemotePin = useCallback(
+    (pin) => {
+      const next = String(pin || "");
+      if (!/^\d{4}$/.test(next) || next === settingsRef.current.pin) return;
+      settingsRef.current = { ...settingsRef.current, pin: next };
+      setSettings((current) => (current.pin === next ? current : { ...current, pin: next }));
+      toast(t("pinChanged"));
+    },
+    [t, toast],
+  );
+
   const applyRemoteMenu = useCallback(
     (menu) => {
       const removed = Array.isArray(menu.removedIds) ? menu.removedIds : [];
@@ -221,9 +232,10 @@ export function AppProvider({ children }) {
       itemsRef.current = nextItems;
       setRemovedIds(removed);
       setItems(nextItems);
+      applyRemotePin(menu.pin);
       rememberUpdatedAt(menu.updatedAt);
     },
-    [rememberUpdatedAt],
+    [applyRemotePin, rememberUpdatedAt],
   );
 
   const publishMenu = useCallback(
@@ -250,6 +262,7 @@ export function AppProvider({ children }) {
         }
         if (result.menu?.updatedAt) {
           rememberUpdatedAt(result.menu.updatedAt);
+          applyRemotePin(result.menu.pin);
           if (!quiet) toast(t("liveSaved"));
           return true;
         }
@@ -262,7 +275,7 @@ export function AppProvider({ children }) {
         publishingRef.current = false;
       }
     },
-    [applyRemoteMenu, rememberUpdatedAt, t, toast],
+    [applyRemoteMenu, applyRemotePin, rememberUpdatedAt, t, toast],
   );
 
   useEffect(() => {
@@ -273,6 +286,7 @@ export function AppProvider({ children }) {
         const server = await fetchLiveMenu();
         if (stop || publishingRef.current) return;
         const choice = chooseSync(menuUpdatedAtRef.current, server);
+        applyRemotePin(server?.pin);
         if (choice === "pull") applyRemoteMenu(server);
         if (choice === "push") await publishMenu(itemsRef.current, removedRef.current, { quiet: true });
       } catch {
@@ -293,7 +307,7 @@ export function AppProvider({ children }) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [applyRemoteMenu, publishMenu]);
+  }, [applyRemoteMenu, applyRemotePin, publishMenu]);
 
   const rememberBillsUpdatedAt = useCallback((value) => {
     const next = Number(value) || 0;

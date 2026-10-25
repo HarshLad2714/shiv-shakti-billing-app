@@ -15,11 +15,13 @@ function json(body, status = 200) {
 }
 
 function publicMenu(data) {
-  if (!data?.items) return { items: null, removedIds: [], updatedAt: 0 };
+  if (!data?.items) return { items: null, removedIds: [], updatedAt: 0, pin: "" };
+  const pin = String(data.pin || "");
   return {
     items: data.items,
     removedIds: Array.isArray(data.removedIds) ? data.removedIds : [],
     updatedAt: Number(data.updatedAt) || 0,
+    pin: /^\d{4}$/.test(pin) ? pin : "1234",
   };
 }
 
