@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Noto Gujarati";
+        src: url("file:///tmp/shiv-shakti-fonts/NotoSansGujarati-Bold.ttf");
+        font-weight: 700;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 1600px;
+        background: #14110f;
+        color: white;
+        font-family: Arial, sans-serif;
+      }
+      main {
+        width: 1200px;
+        height: 1600px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+        padding-top: 70px;
+      }
+      img.logo {
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+      h1 {
+        margin: 30px 0 0;
+        color: #ffc14d;
+        font-size: 84px;
+        letter-spacing: 1px;
+        font-weight: 700;
+      }
+      .sub {
+        margin-top: 8px;
+        font-size: 36px;
+        letter-spacing: 4px;
+      }
+      .card {
+        margin-top: 36px;
+        width: 820px;
+        height: 820px;
+        background: #fffdf8;
+        border-radius: 48px;
+        display: grid;
+        place-items: center;
+      }
+      .card img {
+        width: 760px;
+        height: 760px;
+      }
+      .scan {
+        margin-top: 36px;
+        color: #ffc14d;
+        font-size: 64px;
+        font-weight: 700;
+      }
+      .gu {
+        margin-top: 12px;
+        font-family: "Noto Gujarati", Arial, sans-serif;
+        font-size: 48px;
+        font-weight: 700;
+      }
+      .url {
+        margin-top: 18px;
+        color: #d2c8be;
+        font-size: 28px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img class="logo" src="../public/icon-512.png" alt="" />
+      <h1>SHIV SHAKTI</h1>
+      <div class="sub">FAST FOOD</div>
+      <div class="card"><img src="file:///tmp/shiv-order-qr.png" alt="" /></div>
+      <div class="scan">SCAN TO ORDER</div>
+      <div class="gu">સ્કેન કરીને ઓર્ડર કરો</div>
+      <div class="url">shiv-shakti-billing-app.netlify.app/order</div>
+    </main>
+  </body>
+</html>

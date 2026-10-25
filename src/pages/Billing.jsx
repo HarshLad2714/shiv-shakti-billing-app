@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import CategoryTabs from "../components/CategoryTabs";
 import BillPanel from "../components/BillPanel";
 import ItemGrid from "../components/ItemGrid";
@@ -9,12 +10,17 @@ import { useApp } from "../store/AppContext";
 import { billPlainText, cn, inr, padBill, whatsappUrl } from "../utils/format";
 
 export default function Billing() {
-  const { items, draft, orders, cart, settings, updateSettings, addQty, requestPrint, t } = useApp();
+  const { items, draft, orders, cart, settings, updateSettings, addQty, requestPrint, customerOrders, billFocus, t } = useApp();
+  const waitingOrders = customerOrders.filter((order) => order.status === "new");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(null);
   const searchRef = useRef(null);
+
+  useEffect(() => {
+    if (billFocus) setOpen(true);
+  }, [billFocus]);
 
   const visible = useMemo(() => items.filter((item) => !item.hidden), [items]);
   const categories = useMemo(() => orderedCategories(visible), [visible]);
@@ -72,6 +78,14 @@ export default function Billing() {
                 {t("dismiss")}
               </button>
             </div>
+          )}
+          {waitingOrders.length > 0 && (
+            <Link to="/orders" className="flex min-h-11 items-center justify-between rounded-2xl bg-saffron px-4 text-sm font-bold text-ink">
+              <span>
+                {waitingOrders.length} {t("newCustomerOrders")}
+              </span>
+              <span aria-hidden="true">→</span>
+            </Link>
           )}
           <div className="lg:hidden">
             <OpenOrderBar />

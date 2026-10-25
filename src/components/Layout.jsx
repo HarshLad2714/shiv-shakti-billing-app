@@ -6,13 +6,15 @@ import Logo from "./Logo";
 
 const LINKS = [
   ["/", "billing"],
+  ["/orders", "orders"],
   ["/history", "history"],
   ["/reports", "reports"],
   ["/admin", "admin"],
 ];
 
 export default function Layout() {
-  const { settings, updateSettings, nextBillNo, bills, t } = useApp();
+  const { settings, updateSettings, nextBillNo, bills, customerOrders, t } = useApp();
+  const waitingOrders = customerOrders.filter((order) => order.status === "new").length;
   const todaySales = bills.filter((bill) => istDateKey(bill.dateTime) === todayKey());
   const todayTotal = todaySales.reduce((sum, bill) => sum + Number(bill.grandTotal || 0), 0);
 
@@ -71,12 +73,17 @@ export default function Layout() {
               end={to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold leading-[2.75rem]",
+                  "inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold",
                   isActive ? "bg-gold text-ink" : "text-white/80 hover:bg-white/10",
                 )
               }
             >
               {t(key)}
+              {key === "orders" && waitingOrders > 0 && (
+                <span className="ml-2 inline-grid h-5 min-w-5 place-items-center rounded-full bg-saffron px-1 text-[11px] font-extrabold text-ink">
+                  {waitingOrders}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

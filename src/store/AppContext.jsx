@@ -4,6 +4,7 @@ import { STRINGS } from "../i18n";
 import { computeTotals, lineAmount, roundQty } from "../utils/calc";
 import { billsNeedPush, fetchLiveBills, mergeBills, saveLiveBills } from "../utils/billSync";
 import { chooseSync, fetchLiveMenu, saveLiveMenu } from "../utils/menuSync";
+import { fetchCustomerOrders, loadLocalOrders, mergeIncoming, patchLocalOrder, rememberLocalOrder, updateCustomerOrderStatus } from "../utils/orderSync";
 import { KEYS, load, save } from "../utils/storage";
 
 const AppContext = createContext(null);
@@ -137,6 +138,11 @@ export function AppProvider({ children }) {
   const [printBill, setPrintBill] = useState(null);
   const [printNonce, setPrintNonce] = useState(0);
   const [lastAddedId, setLastAddedId] = useState("");
+  const [customerOrders, setCustomerOrders] = useState(() => loadLocalOrders());
+  const [billFocus, setBillFocus] = useState(0);
+  const seenCustomerOrders = useRef(new Set());
+  const customerOrdersReady = useRef(false);
+  const customerOrdersRef = useRef(customerOrders);
   const menuUpdatedAtRef = useRef(Number(load(KEYS.menuUpdatedAt, 0)) || 0);
   const billsUpdatedAtRef = useRef(Number(load(KEYS.billsUpdatedAt, 0)) || 0);
   const itemsRef = useRef(items);
@@ -147,6 +153,9 @@ export function AppProvider({ children }) {
   const billPublishingRef = useRef(false);
   const billPendingRef = useRef(false);
 
+  useEffect(() => {
+    customerOrdersRef.current = customerOrders;
+  }, [customerOrders]);
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
@@ -274,7 +283,9 @@ export function AppProvider({ children }) {
         if (stop || publishingRef.current) return;
         const choice = chooseSync(menuUpdatedAtRef.current, server);
         if (choice === "pull") applyRemoteMenu(server);
-        if (choice === "push") await publishMenu(itemsRef.current, removedRef.current, { quiet: true });
+        if (choice === "push" && !window.location.pathname.startsWith("/order")) {
+          await publishMenu(itemsRef.current, removedRef.current, { quiet: true });
+        }
       } catch {
         // The live menu is unreachable. This device keeps its saved menu.
       }
@@ -362,6 +373,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     let stop = false;
     const tick = async () => {
+      if (window.location.pathname.startsWith("/order")) return;
       if (billPublishingRef.current) return;
       try {
         const server = await fetchLiveBills();
@@ -390,6 +402,39 @@ export function AppProvider({ children }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [applyBills, publishBills, rememberBillsUpdatedAt]);
+
+  useEffect(() => {
+    let stop = false;
+    const tick = async () => {
+      if (window.location.pathname.startsWith("/order")) return;
+      try {
+        const server = await fetchCustomerOrders();
+        if (stop) return;
+        const merged = mergeIncoming(server.orders, loadLocalOrders());
+        setCustomerOrders(merged);
+        const fresh = merged.filter((order) => order.status === "new" && !seenCustomerOrders.current.has(order.id));
+        merged.forEach((order) => seenCustomerOrders.current.add(order.id));
+        if (customerOrdersReady.current && fresh.length) toast(`${fresh.length} ${t("newCustomerOrders")}`);
+        customerOrdersReady.current = true;
+      } catch {
+        if (!stop) setCustomerOrders((current) => mergeIncoming(current, loadLocalOrders()));
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 15000);
+    const onFocus = () => tick();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [t, toast]);
 
   const dismissToast = useCallback((id) => {
     setToasts((list) => list.filter((item) => item.id !== id));
@@ -531,6 +576,59 @@ export function AppProvider({ children }) {
     },
     [activeOrderId, orders, settings],
   );
+
+  const openCustomerOrder = useCallback(
+    (customerOrder) => {
+      const lines = (customerOrder?.items || [])
+        .map((item) => ({
+          itemId: item.itemId,
+          qty: Number(item.qty) || 0,
+          name: item.name,
+          nameGu: item.nameGu || "",
+          unit: lineUnit(item.unit),
+          price: Number(item.price) || 0,
+        }))
+        .filter((line) => line.itemId && line.qty > 0);
+      if (!lines.length) {
+        toast(t("emptyCart"), "err");
+        return false;
+      }
+      const note = [customerOrder.table ? `T${customerOrder.table}` : "", customerOrder.name || ""].filter(Boolean).join(" · ").slice(0, 32);
+      const nextDraft = sanitizeDraft({ ...newDraft(settings), lines }, settings);
+      if (!draft.lines.length) {
+        setDraft(nextDraft);
+        setOrders((current) => current.map((order) => (order.id === activeOrderId ? { ...order, note, draft: nextDraft } : order)));
+      } else {
+        const created = { ...makeOrder(orderSeq + 1, settings, nextDraft), note };
+        setOrders((current) => [...current.map((order) => (order.id === activeOrderId ? { ...order, draft } : order)), created]);
+        setActiveOrderId(created.id);
+        setOrderSeq(created.seq);
+        setDraft(nextDraft);
+      }
+      setLastAddedId("");
+      setBillFocus((value) => value + 1);
+      return true;
+    },
+    [activeOrderId, draft, orderSeq, settings, t, toast],
+  );
+
+  const stashCustomerOrder = useCallback((order) => {
+    rememberLocalOrder(order);
+    setCustomerOrders((current) => mergeIncoming(current, [order]));
+  }, []);
+
+  const markCustomerOrder = useCallback(async (id, status) => {
+    const existing = customerOrdersRef.current.find((order) => order.id === id);
+    setCustomerOrders((current) => current.map((order) => (order.id === id ? { ...order, status } : order)));
+    patchLocalOrder(id, status);
+    if (existing?.localOnly) return;
+    try {
+      const result = await updateCustomerOrderStatus({ id, status, pin: settingsRef.current.pin });
+      if (result.denied) toast(t("livePin"), "err");
+    } catch {
+      toast(t("liveOffline"), "err");
+    }
+  }, [t, toast]);
 
   const finishActiveOrder = useCallback(() => {
     const rest = orders.filter((order) => order.id !== activeOrderId);
@@ -761,6 +859,11 @@ export function AppProvider({ children }) {
     draft,
     orders,
     activeOrderId,
+    customerOrders,
+    billFocus,
+    openCustomerOrder,
+    markCustomerOrder,
+    stashCustomerOrder,
     cart,
     nextBillNo,
     toasts,
